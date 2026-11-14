@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Password Safety Checker</title>
+<style>
+:root{
+  --bg:#eef2f5; --card:#ffffff; --ink:#1d2b36; --muted:#4a5b68; --line:#c9d3db;
+  --accent:#2d5a78; --accent-ink:#ffffff;
+  --weak:#a8574a; --fair:#b8862f; --good:#5f8a8b; --strong:#4a7c59;
+}
+*{box-sizing:border-box}
+html{font-size:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Arial,sans-serif;line-height:1.55}
+.skip{position:absolute;left:-999px;top:0;background:var(--accent);color:var(--accent-ink);padding:.6rem 1rem}
+.skip:focus{left:.5rem;top:.5rem;z-index:10}
+header,main,footer{max-width:40rem;margin:0 auto;padding:0 1rem}
+header{padding-top:1.25rem}
+nav{display:flex;gap:.5rem;border-bottom:1px solid var(--line);padding-bottom:.75rem}
+nav a{color:var(--accent);padding:.5rem .9rem;border-radius:6px;text-decoration:none;font-weight:600}
+nav a[aria-current="page"]{background:var(--accent);color:var(--accent-ink)}
+h1{font-size:1.75rem;margin:1.5rem 0 .25rem}
+h2{font-size:1.2rem;margin:0 0 .5rem}
+.lead{color:var(--muted);margin:0 0 1.25rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1.25rem;margin-bottom:1rem}
+label{display:block;font-weight:600;margin-bottom:.35rem}
+.hint{color:var(--muted);font-size:.95rem;margin:.35rem 0 0}
+.row{display:flex;gap:.5rem;flex-wrap:wrap}
+input[type=password],input[type=text]{flex:1 1 12rem;min-width:0;font-size:1.1rem;padding:.7rem .8rem;border:2px solid #6c7f8c;border-radius:8px;background:#fff;color:var(--ink)}
+button{font:inherit;font-weight:600;padding:.65rem 1rem;border-radius:8px;border:2px solid var(--accent);background:#fff;color:var(--accent);cursor:pointer;min-height:2.75rem}
+button.primary{background:var(--accent);color:var(--accent-ink)}
+button:hover{background:#e3ecf2}
+button.primary:hover{background:#244b65}
+:focus-visible{outline:3px solid #1d2b36;outline-offset:2px}
+.meter{height:.9rem;background:#dde4ea;border-radius:999px;overflow:hidden;margin:1rem 0 .5rem}
+.meter span{display:block;height:100%;width:0;background:var(--weak);transition:width .25s}
+.verdict{font-size:1.3rem;font-weight:700;margin:0}
+.time{margin:.1rem 0 .75rem;color:var(--muted)}
+.tips{margin:0;padding-left:1.2rem}
+.tips li{margin:.3rem 0}
+.note{border-left:4px solid var(--good);background:#f3f8f8}
+.suggest-out{font-size:1.15rem;font-weight:700;letter-spacing:.02em;word-break:break-word;margin:.75rem 0 .5rem}
+.status{min-height:1.5rem;color:var(--muted);margin:.5rem 0 0}
+footer{padding:1rem 1rem 2rem;color:var(--muted);font-size:.95rem}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){.meter span{transition:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header>
+  <nav aria-label="Main">
+    <a href="#checker" id="nav-checker" aria-current="page">Checker</a>
+    <a href="#tips" id="nav-tips">Quick tips</a>
+  </nav>
+</header>
+
+<main id="main" tabindex="-1">
+
+<section id="view-checker" aria-labelledby="h-checker">
+  <h1 id="h-checker">Password Safety Checker</h1>
+  <p class="lead">Type a password to see how strong it is and how to make it better.</p>
+
+  <div class="card">
+    <label for="pw">Password to check</label>
+    <div class="row">
+      <input id="pw" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="pw-hint">
+      <button type="button" id="toggle" aria-pressed="false">Show</button>
+      <button type="button" id="clear">Clear</button>
+    </div>
+    <p class="hint" id="pw-hint">The check happens as you type. Nothing is sent anywhere.</p>
+    <p class="status" id="empty-msg" role="alert"></p>
+
+    <div class="meter" aria-hidden="true"><span id="bar"></span></div>
+    <p class="verdict" id="verdict">Strength: not checked yet</p>
+    <p class="time" id="time">Start typing to see a result.</p>
+    <h2>How to improve it</h2>
+    <ul class="tips" id="tips"><li>Your tips will show here.</li></ul>
+    <p class="sr-live" id="live" role="status" aria-live="polite" style="position:absolute;left:-999px"></p>
+  </div>
+
+  <div class="card note">
+    <h2>Your password stays with you</h2>
+    <p style="margin:0">This page checks your password inside your own browser. It is never sent or stored.</p>
+  </div>
+
+  <div class="card">
+    <h2>Need an idea?</h2>
+    <p class="hint" style="margin-top:0">A long phrase of random words is strong and easy to remember.</p>
+    <button type="button" class="primary" id="suggest">Suggest a passphrase</button>
+    <div id="suggest-box" hidden>
+      <p class="suggest-out" id="suggest-out"></p>
+      <p class="hint">This is only an example. Make your own, and do not reuse this one.</p>
+      <button type="button" id="try">Check this example</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <button type="button" id="share">Copy link to share this tool</button>
+    <p class="status" id="share-msg" role="status"></p>
+  </div>
+</section>
+
+<section id="view-tips" aria-labelledby="h-tips" hidden>
+  <h1 id="h-tips">Quick tips</h1>
+  <p class="lead">Five habits that keep your accounts safer.</p>
+  <div class="card">
+    <ol class="tips">
+      <li>Use a different password for every account.</li>
+      <li>Make passwords long. A phrase of four or more random words works well.</li>
+      <li>Use a password manager so you do not have to remember them all.</li>
+      <li>Turn on two-step verification for your email and university accounts.</li>
+      <li>Never share a password, even with friends.</li>
+    </ol>
+  </div>
+  <p><a href="#checker">Back to the checker</a></p>
+</section>
+
+</main>
+
+<footer>Password Safety Checker. Student prototype for Human Computer Interaction.</footer>
+
+<script>
+(function(){
+  var COMMON=["password","123456","12345678","123456789","qwerty","abc123","letmein","welcome","admin","iloveyou","monkey","dragon","football","sunshine","princess","master","login","passw0rd","111111","000000","1q2w3e4r","qwerty123","student","university","pass1234","123123","1234","12345","1234567","1234567890","qwertyuiop","asdfghjkl","zxcvbnm","password1","password123","password12","password2","welcome1","welcome123","letmein1","letmein123","admin123","monkey123","dragon123","football1","trustno1","1q2w3e","1qaz2wsx","qazwsx","zaq12wsx","q1w2e3r4","asdf1234","qwer1234","pass123","changeme","default","guest","toor","test123","testing","student1","student123","iloveu","princess1","sunshine1","azerty","qwertz","121212","123321","654321","666666","696969","987654321","112233","1234qwer","12341234","11111111","00000000","88888888","iloveyou1","iloveyou2","mzansi1","sipho123"];
+  var WORDS=["river","candle","orange","planet","window","garden","pencil","violet","bridge","forest","silver","rocket","cactus","pillow","harbor","button","meadow","lantern","pepper","anchor","marble","thunder","coffee","island","magnet","jungle","ticket","velvet","walnut","yellow","zebra","blanket","compass","dolphin","engine","feather","glacier","hammer","igloo","jacket","kettle","ladder","mango","napkin","oyster","parcel","quartz","ribbon","saddle","tunnel","umbrella","valley","whistle","carpet","bucket","cherry","desert","ember","fabric","guitar","helmet","insect","jigsaw","koala","apple","basket","camera","diamond","eagle","falcon","goblet","honey","ivory","jelly","kernel","lemon","mirror","nickel","olive","piano","quiver","radish","sponge","tomato","urchin","vessel","willow","xylophone","yogurt","zipper","acorn","bagel","cabin","dagger","elbow","fiddle","gravel","hazel","iceberg","jasmine","kayak","lizard","muffin","nutmeg","orchid","paddle","quilt","raisin","sandal","tiger","vinegar","wagon","yarn","zenith","almond","badge","canyon","dragon","emerald","flute","grape","hollow","inkwell","kitten","lagoon","mitten","noodle","oasis","pebble","quokka","rabbit","shovel","turtle","uniform","violin","walrus","yacht","zephyr","amber","barrel","clover","donkey","easel","feast","goose","hamster","iguana","jaguar","kiwi","lilac","mosaic","nectar","otter","parrot","quarry","rooster","sailor","teapot","upland","vortex","wombat","yodel","zinnia","arrow","beacon","cobweb","dune","earth","flame","glove","harp","icicle","jewel","knight","lotus","mule","needle","owl","poppy","quail","rain","stone","trumpet","urn","vine","wheel","yeti","zest","anvil","brook","cloud","drum","elk","fern","gate","hill","ink","jar","kite","lamp","moon","nest","oak","pond","quill","rope","sun","tree","vase","wolf","box","cave","dove","fig","gem","hat","iron","key","leaf","map","nut","orb","pear","ring","sail","tent","van","web","axe","bell","cup","dew","egg","fox","gull","hive","jam","kelp","log","mint","net","oar","pie","rug","sky","tulip","wing","yam","bamboo","canvas","fossil","gadget","harvest","cinder","tundra","lighthouse","alpine","apron","aspen","atlas","badger","bakery","banjo","barley","basil","beetle","birch","bishop","biscuit","blossom","bobcat","bonnet","boulder","bramble","bronze","bubble","buffalo","butter","cabbage","caramel","carrot","castle","cedar","celery","cheetah","chestnut","cider","cinnamon","circus","citrus","clam","coconut","comet","copper","coral","cotton","cougar","cousin","cradle","crayon","crimson","crystal","cuckoo","cupcake","curtain","daisy","dandelion","dawn","denim","dessert","dinner","doodle","drizzle","dusk","eclipse","elder","fennel","ferry","finch","firefly","flannel","fjord","flint","foxglove","freckle","frost","fudge","garlic","geyser","glider","gopher","granite","hammock","harbour","hazelnut","hedgehog","heron","hickory","hobby","horizon","hyacinth","indigo","ironwood","jackal","jersey","juniper","kangaroo","kestrel","kingfisher","ladybug","lavender","lemonade","leopard","licorice","lilypad","lobster","lullaby","lynx","magpie","maple","marmot","mayfly","meteor","minnow","mistral","molasses","monsoon","moss","mulberry","mustard","nutshell","oatmeal","ocelot","onion","opal","orchard","oriole","osprey","oven","paprika","pasture","peach","peacock","pelican","pewter","pigeon","pine","pistachio","plum","pomelo","porcupine","prairie","puffin","pumice","quince","raccoon","raven","reed","ridge","robin","rosemary","saffron","sage","salmon","sapphire","satchel","scarf","seagull","sesame","shamrock","sheep","skillet","slate","sleet","snowdrop","sorbet","sparrow","spruce","squid","starling","stork","sundial","sunflower","swallow","swan","sycamore","tamarind","tangerine","tapestry","thistle","thimble","thyme","toffee","topaz","trout","truffle","turnip","twilight","vanilla","waffle","wasp","watermelon","weasel","wetland","wheat","wicker","wildcat","windmill","wisteria","woodland","wren","yarrow","zucchini"];
+  var COMMONWORDS=["james","john","michael","david","daniel","thomas","robert","sarah","emma","olivia","sophia","jessica","ashley","amanda","jennifer","lauren","megan","lebo","thabo","sipho","themba","nomsa","naledi","mpho","kabelo","lerato","zanele","thandi","mitchell","mudiwa","tendai","tatenda","blessing","precious","grace","faith","hope","joy","love","angel","baby","honey","sweet","lucky","happy","money","secret","hello","freedom","friend","family","mother","father","sister","brother","johannesburg","joburg","pretoria","durban","capetown","soweto","africa","mzansi","springbok","springboks","chiefs","pirates","sundowns","kaizer","liverpool","chelsea","arsenal","barcelona","madrid","manutd","ronaldo","messi","january","february","march","april","may","june","july","august","september","october","november","december","summer","winter","spring","autumn","monday","friday","sunday","sunshine","rainbow","flower","butterfly","ninja","pokemon","naruto","batman","superman","spiderman","starwars","matrix","minecraft","fortnite","roblox","soccer","cricket","rugby","tennis","hockey","school","college","campus","student","university","varsity","gmail","yahoo","google","apple","iphone","samsung","android","facebook","instagram","tiktok","snapchat","whatsapp","twitter","youtube","netflix","spotify","computer","internet","laptop","login","admin","test","guest","user","root","default","changeme","trustno1","baseball","basketball","hunter","shadow","ginger","cookie","cheese","pizza","chocolate","banana","purple","orange","silver","golden","diamond","lindiwe","nkosi","ayanda","bongani","sandile","zinhle","andile","khanyi","thulani","siyabonga","mandla","buhle","palesa","refilwe","tshepo","neo","karabo","kagiso","tumelo","lwazi","jabu","vusi","dineo","ntombi","sizwe","rudo","farai","tafara","chipo","tinashe","nyasha","simba","tapiwa","rufaro","mary","peter","paul","mark","luke","anna","lisa","kate","jack","jake","liam","noah","mason","ethan","lucas","ryan","kyle","brandon","chris","matthew","joseph","william","richard","charles","steven","kevin","brian","jason","justin","nicole","samantha","taylor","rachel","hannah","natalie","kayla","brittany","alexis","victoria","chloe","mia","ella","ruby","lily","amy","kim","tina","anne","jane","tom","tim","sam","alex","max","ben","dan","joe","bob","tiger","lion","eagle","wolf","bear","panther","phoenix","monster","killer","samurai","warrior","hero","king","queen","prince","devil","god","jesus","heaven","star","moon","sun","sky","ocean","river","mountain","fire","water","earth","wind","rock","metal","music","dance","guitar","piano","game","gamer","gaming","player","winner","champion","power","magic","dream","storm","thunder","lightning","ghost","black","white","green","blue","red","pink","gold","wednesday","tuesday","thursday","saturday","mustang","harley","ranger","buster","tigger","jordan","charlie","andrew","joshua","access","bailey","michelle","thankyou","blessed","godisgood","iloveyou","loveyou","mylove","lovely","whatever","dragon","pepper","welcome","letmein","qwerty","password","passw0rd"];
+  var $=function(id){return document.getElementById(id)};
+  var pw=$("pw"),bar=$("bar"),verdict=$("verdict"),timeEl=$("time"),tips=$("tips"),live=$("live"),empty=$("empty-msg");
+  var liveTimer;
+
+  function normalise(s){return s.toLowerCase().replace(/0/g,"o").replace(/1/g,"l").replace(/3/g,"e").replace(/4/g,"a").replace(/5/g,"s").replace(/@/g,"a").replace(/\$/g,"s").replace(/[^a-z]+$/,"")}
+  function hasSequence(s){var l=s.toLowerCase();var rows=["qwertyuiop","asdfghjkl","zxcvbnm","1234567890","1qaz2wsx3edc"];for(var r=0;r<rows.length;r++){var row=rows[r],rev=row.split("").reverse().join("");for(var k=0;k<l.length-3;k++){var w=l.substr(k,4);if(row.indexOf(w)>-1||rev.indexOf(w)>-1)return true}}for(var i=0;i<l.length-3;i++){var a=l.charCodeAt(i),b=l.charCodeAt(i+1),c=l.charCodeAt(i+2),d=l.charCodeAt(i+3);if(b-a===1&&c-b===1&&d-c===1)return true}return false}
+  function baseWord(s){return s.toLowerCase().replace(/^[^a-z]+/,"").replace(/[^a-z]+$/,"")}
+  function isPredictableWord(s){var b=baseWord(s),n=normalise(s);return COMMONWORDS.indexOf(b)>-1||COMMONWORDS.indexOf(n)>-1||COMMONWORDS.indexOf(baseWord(normalise(s)))>-1}
+  function passphraseWords(s){var p=s.split(/[\s\-_.]+/).filter(Boolean);if(p.length<3)return 0;for(var i=0;i<p.length;i++){if(!/^[A-Za-z]{3,}$/.test(p[i]))return 0}return p.length}
+  function hasRepeat(s){return /(.)\1{2,}/.test(s)||/^(.{2,4})\1+$/.test(s)}
+
+  function analyse(s){
+    var n=s.length,pool=0;
+    if(/[a-z]/.test(s))pool+=26; if(/[A-Z]/.test(s))pool+=26; if(/[0-9]/.test(s))pool+=10; if(/[^A-Za-z0-9]/.test(s))pool+=32;
+    var common=COMMON.indexOf(s.toLowerCase())>-1||COMMON.indexOf(normalise(s))>-1;
+    var seq=hasSequence(s),rep=hasRepeat(s);
+    var predictable=!common&&isPredictableWord(s),pw=passphraseWords(s);
+    var guesses=Math.pow(pool,n);
+    if(pw)guesses=Math.min(guesses,Math.pow(1e5,pw));
+    if(predictable)guesses=Math.min(guesses,1e9);
+    if(seq)guesses/=1e4; if(rep)guesses/=1e3;
+    if(common)guesses=1e3;
+    if(n<8)guesses=Math.min(guesses,1e8);
+    var seconds=guesses/1e10/2;
+    var level=seconds<86400?0:seconds<31536000?1:seconds<31536000*1000?2:3;
+    if(n<8)level=0;
+    var t=[];
+    if(common)t.push("This is a very common password. Pick something only you would think of.");
+    if(predictable)t.push("This is built on a common word, name or year. Add other random words instead.");
+    if(n<12&&!common&&!predictable)t.push("Make it longer. Aim for 12 characters or more.");
+    if(seq||rep)t.push("Avoid repeated letters or runs like abc or 123.");
+    if(!common&&!predictable&&!pw&&n>=12&&!/[^A-Za-z]/.test(s)&&level<3)t.push("Try joining a few random words together.");
+    if(!t.length&&level<3)t.push("Add another random word to make it stronger.");
+    if(!t.length)t.push("Nice, that is a strong one. Use it for one account only.");
+    return {level:level,seconds:seconds,tips:t.slice(0,3)};
+  }
+
+  function timeText(sec){
+    if(sec<1)return "Could be guessed in less than a second.";
+    if(sec<60)return "Could be guessed in seconds.";
+    if(sec<3600)return "Could be guessed in minutes.";
+    if(sec<86400)return "Could be guessed in hours.";
+    if(sec<31536000)return "Could be guessed in days or months.";
+    if(sec<31536000*1000)return "Would take years to guess.";
+    return "Would take many thousands of years to guess.";
+  }
+
+  var LABELS=["Weak","Fair","Good","Strong"],COLORS=["--weak","--fair","--good","--strong"],WIDTH=[25,50,75,100];
+
+  function render(){
+    var v=pw.value;
+    empty.textContent="";
+    if(!v){
+      bar.style.width="0";
+      verdict.textContent="Strength: not checked yet";
+      timeEl.textContent="Start typing to see a result.";
+      tips.innerHTML="<li>Your tips will show here.</li>";
+      live.textContent="";
+      return;
+    }
+    var r=analyse(v);
+    bar.style.width=WIDTH[r.level]+"%";
+    bar.style.background="var("+COLORS[r.level]+")";
+    verdict.textContent="Strength: "+LABELS[r.level];
+    var tt=timeText(r.seconds);
+    timeEl.textContent=tt+" (a rough estimate)";
+    tips.innerHTML="";
+    r.tips.forEach(function(x){var li=document.createElement("li");li.textContent=x;tips.appendChild(li)});
+    clearTimeout(liveTimer);
+    liveTimer=setTimeout(function(){live.textContent="Strength: "+LABELS[r.level]+". "+tt+" "+r.tips[0]},700);
+  }
+
+  pw.addEventListener("input",render);
+
+  $("toggle").addEventListener("click",function(){
+    var show=pw.type==="password";
+    pw.type=show?"text":"password";
+    this.textContent=show?"Hide":"Show";
+    this.setAttribute("aria-pressed",show?"true":"false");
+  });
+
+  $("clear").addEventListener("click",function(){
+    if(!pw.value){empty.textContent="The box is already empty. Type a password to check it.";pw.focus();return}
+    pw.value="";render();pw.focus();
+  });
+
+  var current="";
+  $("suggest").addEventListener("click",function(){
+    var a=new Uint32Array(5);crypto.getRandomValues(a);
+    var w=[];for(var i=0;i<5;i++)w.push(WORDS[a[i]%WORDS.length]);
+    current=w.join("-");
+    $("suggest-out").textContent=current;
+    $("suggest-box").hidden=false;
+  });
+
+  $("try").addEventListener("click",function(){
+    pw.value=current;render();pw.focus();
+  });
+
+  $("share").addEventListener("click",function(){
+    var msg=$("share-msg"),url=location.href.split("#")[0];
+    function ok(){msg.textContent="Link copied. Only the link is shared, never a password."}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(ok,function(){msg.textContent="Could not copy. Copy the address from your browser bar."})}
+    else{msg.textContent="Copy the address from your browser bar to share this tool."}
+  });
+
+  function route(){
+    var tipsView=location.hash==="#tips";
+    $("view-checker").hidden=tipsView;
+    $("view-tips").hidden=!tipsView;
+    var a=$("nav-checker"),b=$("nav-tips");
+    if(tipsView){b.setAttribute("aria-current","page");a.removeAttribute("aria-current")}
+    else{a.setAttribute("aria-current","page");b.removeAttribute("aria-current")}
+    document.title=(tipsView?"Quick tips":"Checker")+" | Password Safety Checker";
+  }
+  window.addEventListener("hashchange",function(){route();$("main").focus()});
+  route();
+})();
+</script>
+</body>
+</html>
